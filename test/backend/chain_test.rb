@@ -57,6 +57,37 @@ class I18nBackendChainTest < Test::Unit::TestCase
     assert_equal [{ :short => 'short', :long => 'long' }, { :one => 'one' }, 'Bah'], I18n.t([:formats, :plural_2, :bah], :default => 'Bah')
   end
 
+  test "store_translations options are not dropped while transfering to backend" do
+    @first.expects(:store_translations).with(:foo, {:bar => :baz}, {:option => 'persists'})
+    I18n.backend.store_translations :foo, {:bar => :baz}, {:option => 'persists'}
+  end
+
+  test 'store should call initialize on all backends and return true if all initialized' do
+    @first.send :init_translations
+    @second.send :init_translations
+    assert_equal(I18n.backend.initialized?, true)
+  end
+
+  test 'store should call initialize on all backends and return false if one not initialized' do
+    @first.reload!
+    @second.send :init_translations
+    assert_equal(I18n.backend.initialized?, false)
+  end
+
+  test 'should reload all backends' do
+    @first.send :init_translations
+    @second.send :init_translations
+    I18n.backend.reload!
+    assert_equal(@first.initialized?, false)
+    assert_equal(@second.initialized?, false)
+  end
+
+  test 'should be able to get all translations of the first backend' do
+    assert_equal I18n.backend.send(:translations),{:en => {
+      :foo => 'Foo', :formats => { :short => 'short' }, :plural_1 => { :one => '%{count}' }
+    }}
+  end
+
   protected
 
     def backend(translations)
